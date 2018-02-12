@@ -2,12 +2,14 @@ import os
 import shutil
 import tempfile
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 
 from pptx import Presentation
 
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdftypes import PDFObjectNotFound
+from pdfminer import pdfinterp
 
 
 class PDFConverter:
@@ -19,21 +21,28 @@ class PDFConverter:
         self._pdfname = pdfname
         self._tempdir = tempfile.mkdtemp()
 
-    def convert(self):
+    def _task(self, i):
         cmd = """\
         convert \
         -density 600 \
         -colorspace sRGB \
         -background white \
         -alpha remove \
-        {} \
-        {}/page.png \
-        """.format(self._pdfname, self._tempdir)
+        -resize 1280x1024 \
+        {0}[{2}] \
+        {1}/page-{2}.png \
+        """.format(self._pdfname, self._tempdir, i)
 
         subprocess.call(cmd, shell=True)
 
-        for _, _, flies in os.walk(self._tempdir):
-            n_pages = len(flies)
+    def convert(self):
+        with open(self._pdfname, 'rb') as f:
+            parser = PDFParser(f)
+            document = PDFDocument(parser, '')
+            n_pages = pdfinterp.resolve1(document.catalog['Pages'])['Count']
+
+        with ThreadPoolExecutor() as executor:
+            executor.map(self._task, range(n_pages))
 
         for i in range(n_pages):
             slide = self.presentation.slides.add_slide(self._layout)
