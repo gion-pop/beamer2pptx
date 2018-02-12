@@ -1,0 +1,20 @@
+\ProvidesPackage{beamer2pptx}[2018/02/12 v1.0]
+
+\@ifclassloaded{beamer}{%
+  \usepackage{pdfcomment}
+
+  \def\bp@pptxnotes#1{\marginnote{\pdfcomment[hoffset=2pt]{#1}}}
+
+  \newcommand<>{\pptxnotes}[1]{%
+    \ifx\relax#2\relax
+      \only<1>{\bp@pptxnotes{#1}}
+    \else
+      \only#2{\bp@pptxnotes{#1}}
+    \fi
+  }%
+}{%
+  \PackageWarningNoLine
+  {beamer2pptx}
+  {I will not do anything if called with a document
+    that is not a Beamer class}%
+}
